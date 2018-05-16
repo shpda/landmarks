@@ -18,41 +18,26 @@ import time
 # Resolve 'Set changed size during iteration'
 tqdm.monitor_interval = 0
 
-def readTrainCSV(path):
-    with open(path + '/train.csv') as csvfile:
-        readCSV = csv.reader(csvfile, delimiter=',')
+def readCSV(path, targetSet):
+    with open('%s/tiny_tiny_landmarks_%s.csv' % (path,targetSet)) as csvfile:
+        CSVreader = csv.reader(csvfile, skipinitialspace=True, delimiter=',')
         fileNames = []
         labels = []
         missingFiles = 0
-        for row in readCSV:
+        for row in CSVreader:
             baseName = row[0]
+            #fName = path + '/train/' + baseName + '.jpg'
+            fName = row[1]
             label = row[2]
-            fName = path + '/train/' + baseName + '.jpg'
             if osp.isfile(fName):
                 fileNames.append(fName)
                 labels.append(label)
             else:
                 missingFiles = missingFiles + 1
-        print('Found %d missing train files' % missingFiles)
-        print('Got %d train picture filenames' % len(fileNames))
-        print('Got %d train picture labels' % len(labels))
+        print('Found %d missing %s files' % (missingFiles, targetSet))
+        print('Got %d %s picture filenames' % (len(fileNames), targetSet))
+        print('Got %d %s picture labels' % (len(labels), targetSet))
         return fileNames, labels
-
-def readTestCSV(path):
-    with open(path + '/test.csv') as csvfile:
-        readCSV = csv.reader(csvfile, delimiter=',')
-        fileNames = []
-        missingFiles = 0
-        for row in readCSV:
-            baseName = row[0]
-            fName = path + '/test/' + baseName + '.jpg'
-            if osp.isfile(fName):
-                fileNames.append(fName)
-            else:
-                missingFiles = missingFiles + 1
-        print('Found %d missing test files' % missingFiles)
-        print('Got %d test picture filenames' % len(fileNames))
-        return fileNames
 
 class LandmarksData(Dataset):
     """
@@ -63,27 +48,18 @@ class LandmarksData(Dataset):
                  percent=1.0,
                  transform=None,
                  preload=False,
-                 isTrain=False):
-        """ Intialize the LandmarksData dataset
-        
-        Args:
-            - root: root directory of the dataset
-            - tranform: a custom tranform function
-            - preload: if preload the dataset into memory
-        """
+                 targetSet='train'):
+
         self.images = None
         self.labels = None
         self.filenames = []
         self.root = root
         self.transform = transform
-        self.isTrain = isTrain
+        self.label2idx = {}
 
         tic = time.time()
         # read filenames
-        if isTrain:
-            self.filenames, self.labels = readTrainCSV(self.root)
-        else:
-            self.filenames = readTestCSV(self.root)
+        self.filenames, self.labels = readCSV(self.root, targetSet)
         toc = time.time()
         print("Read filenames took %.2f s" % (toc-tic))
 
@@ -92,6 +68,12 @@ class LandmarksData(Dataset):
         print('Percentage to load = {}/{} ({:.0f}%)'.format(shorterLen, fullLen, 100. * percent))
         self.filenames = self.filenames[:shorterLen]
         self.labels = self.labels[:shorterLen]
+
+        idx = 0
+        for l in self.labels:
+            if int(l) not in self.label2idx.keys():
+                self.label2idx[int(l)] = idx
+                idx += 1
         
         # if preload dataset into memory
         if preload:
@@ -119,25 +101,27 @@ class LandmarksData(Dataset):
     def __getitem__(self, index):
         """ Get a sample from the dataset
         """
-        label = []
+        labelIdx = 0
         if self.images is not None:
             # If dataset is preloaded
             image = self.images[index]
-            if self.isTrain:
+            if self.labels:
                 label = int(self.labels[index])
+                labelIdx = self.label2idx[label]
         else:
             # If on-demand data loading
             image_fn = self.filenames[index]
             image = Image.open(image_fn)
-            if self.isTrain:
+            if self.labels:
                 label = int(self.labels[index])
+                labelIdx = self.label2idx[label]
             
         # May use transform function to transform samples
         # e.g., random crop, whitening
         if self.transform is not None:
             image = self.transform(image)
         # return image and label
-        return image, label
+        return image, labelIdx
 
     def __len__(self):
         """
@@ -152,24 +136,19 @@ class Batcher(object):
     def __init__(self,
                  root='/home/gangwu/small-landmarks-data',
                  percent=1.0, # load a subset of data
-                 preload=False):
+                 preload=False,
+                 batchSize=64,
+                 targetSet='train'):
 
         # preprocessing stuff
-        myTrans = transforms.Compose([transforms.Resize((32, 32)),
+        #myTrans = transforms.Compose([transforms.Resize((32, 32)),
+        #                              transforms.ToTensor()])
+        myTrans = transforms.Compose([transforms.CenterCrop(256),
                                       transforms.ToTensor()])
 
-        trainset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, isTrain = True)
-        self.loader = DataLoader(trainset, batch_size=64, shuffle=True, num_workers=1)
+        dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
+        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=1)
         self.dataiter = iter(self.loader)
-
-        '''
-        testset = LandmarksData(
-            root='/home/gangwu/small-landmarks-data',
-            preload=True, transform=transforms.ToTensor(), isTrain = False
-        )
- 
-        testset_loader = DataLoader(testset, batch_size=50, shuffle=False, num_workers=1)
-        '''
         #print(len(trainset))
         #print(len(testset))
 
@@ -186,10 +165,10 @@ def showDataInClass(classId):
                                   transforms.ToTensor()])
     #myTrans = transforms.Compose([transforms.ToTensor()])
     with open('/home/gangwu/projects/landmarks/data/train.csv') as csvfile:
-        readCSV = csv.reader(csvfile, delimiter=',')
+        CSVreader = csv.reader(csvfile, delimiter=',')
         fileNames = []
         images = []
-        for row in tqdm(readCSV):
+        for row in tqdm(CSVreader):
             if first:
                 first = False
                 continue
@@ -209,7 +188,9 @@ def showDataInClass(classId):
         imshow(torchvision.utils.make_grid(images))
 
 def run_test():
-    batcher = Batcher('/home/gangwu/small-landmarks-data', preload=True)
+    #path = '/home/gangwu/small-landmarks-data'
+    path = '/home/gangwu/projects/landmarks/data/tiny-landmarks'
+    batcher = Batcher(path, preload=True)
     imagesIter = batcher.dataiter
     images, labels = imagesIter.next()
 

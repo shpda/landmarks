@@ -2,9 +2,36 @@
 # lm_model.py
 # landmarks model to be trained
 
+import torch
+import torchvision
 import torch.nn as nn
 import torch.nn.functional as func
 
+resnet101 = torchvision.models.resnet101(pretrained=True)
+
+class LandmarksModel(nn.Module):
+    def __init__(self, num_classes):
+        super(LandmarksModel, self).__init__()
+        self.features = nn.Sequential(*list(resnet101.children())[:-1])
+        self.classifier = nn.Sequential(
+                            nn.Linear(8192, num_classes)
+                          )
+        self.modelName = 'resnet'
+
+        for p in self.features.parameters():
+            p.requires_grad = False
+
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return func.log_softmax(x, dim=1)
+
+    def getParameters(self):
+        return filter(lambda p: p.requires_grad, self.parameters())
+
+'''
 class LandmarksModel(nn.Module):
     def __init__(self):
         super(LandmarksModel, self).__init__()
@@ -12,7 +39,7 @@ class LandmarksModel(nn.Module):
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
         self.conv2_drop = nn.Dropout2d()
         self.fc1 = nn.Linear(500, 50)
-        self.fc2 = nn.Linear(50, 10)
+        self.fc2 = nn.Linear(50, 12)
 
     def forward(self, x):
         x = func.relu(func.max_pool2d(self.conv1(x), 2))
@@ -22,8 +49,7 @@ class LandmarksModel(nn.Module):
         x = func.dropout(x, training=self.training)
         x = self.fc2(x)
         return func.log_softmax(x, dim=1)
-
-
+'''
 
 def run_test():
     print('Test landmarks module')
