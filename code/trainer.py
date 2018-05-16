@@ -27,14 +27,10 @@ class Trainer():
         best_dev_loss = sys.float_info.max
         for ep in range(epoch):
             epoch_tic = time.time()
-            print('enumerate data')
             for batch_idx, (data, target) in enumerate(self.loader):
-                print('get data')
                 data, target = data.cuda(self.device), target.cuda(self.device)
-                print('set zero grad')
                 self.optimizer.zero_grad()
 
-                print('compute forward pass')
                 # forward pass
                 output = self.model(data)
                 loss = func.nll_loss(output, target)
@@ -50,12 +46,14 @@ class Trainer():
                         batch_idx * len(data), len(self.loader.dataset), 
                         100. * batch_idx / len(self.loader), loss.item()))
 
+                '''
                 if iteration % self.eval_interval == 0:
                     dev_loss = self.devEval()
                     if dev_loss < best_dev_loss:
                         best_dev_loss = dev_loss
                         saveModel('%s/lm-best.pth' % self.exp_path, 
                                   self.model, self.optimizer)
+                '''
 
                 '''
                 if iteration % self.save_interval == 0:
@@ -65,6 +63,10 @@ class Trainer():
                 iteration += 1
             epoch_toc = time.time()
             print('End of epoch %i. Seconds took: %.2f s.' % (ep, epoch_toc - epoch_tic))
+            dev_loss = self.devEval()
+            if dev_loss < best_dev_loss:
+                best_dev_loss = dev_loss
+                saveModel('%s/lm-best.pth' % self.exp_path, self.model, self.optimizer)
 
     def devEval(self):
         self.model.eval()  # set evaluation mode

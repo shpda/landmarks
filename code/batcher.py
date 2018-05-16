@@ -10,7 +10,7 @@ import os.path as osp
 import numpy as np
 from PIL import Image
 
-#import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import csv
 import time
@@ -89,8 +89,8 @@ class LandmarksData(Dataset):
         self.images = []
         print('Preloading...')
         tic = time.time()
-        #for image_fn in tqdm(self.filenames):            
-        for image_fn in self.filenames:
+        #for image_fn in self.filenames:
+        for image_fn in tqdm(self.filenames):            
             # load images
             image = Image.open(image_fn)
             # avoid too many opened files bug
@@ -148,7 +148,7 @@ class Batcher(object):
                                       transforms.ToTensor()])
 
         dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
-        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=50)
+        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=1)
         self.dataiter = iter(self.loader)
         #print(len(trainset))
         #print(len(testset))
@@ -169,8 +169,8 @@ def showDataInClass(classId):
         CSVreader = csv.reader(csvfile, delimiter=',')
         fileNames = []
         images = []
-        #for row in tqdm(CSVreader):
-        for row in CSVreader:
+        #for row in CSVreader:
+        for row in tqdm(CSVreader):
             if first:
                 first = False
                 continue
