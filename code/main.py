@@ -34,7 +34,8 @@ def main():
     if args.mode == 'train':
         device = getDevice()
         model = LandmarksModel(num_classes).to(device)
-        optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
+        #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
+        optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
 
         trainer = Trainer(model, loader, dev_loader, optimizer, device, exp_path)
         print('Start training...')
