@@ -16,9 +16,9 @@ def printArgs(args):
 
 def getDevice():
     use_cuda = torch.cuda.is_available()
-    device = torch.device(cuda if use_cuda else "cpu")
+    device = torch.cuda.device(1 if use_cuda else "cpu")
     print('device = %s' % device)
-    return device
+    return 0
 
 def saveModel(checkpoint_path, model, optimizer):
     state = {'state_dict': model.state_dict(),

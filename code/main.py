@@ -19,7 +19,8 @@ def main():
     printArgs(args)
 
     root = '/home/gangwu/projects/landmarks'
-    path = root + '/data/tiny-landmarks'
+    #path = root + '/data/tiny-landmarks'
+    path = root + '/csvFiles'
     exp_path = root + '/experiment/' + args.experiment_name
     os.system('mkdir -p ' + exp_path)
 
@@ -33,7 +34,7 @@ def main():
 
     if args.mode == 'train':
         device = getDevice()
-        model = LandmarksModel(num_classes).to(device)
+        model = LandmarksModel(num_classes).cuda(device)
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
         optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
 

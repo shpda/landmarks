@@ -10,13 +10,13 @@ import os.path as osp
 import numpy as np
 from PIL import Image
 
-from tqdm import tqdm
+#import tqdm
 import matplotlib.pyplot as plt
 import csv
 import time
 
 # Resolve 'Set changed size during iteration'
-tqdm.monitor_interval = 0
+#tqdm.monitor_interval = 0
 
 def readCSV(path, targetSet):
     with open('%s/tiny_tiny_landmarks_%s.csv' % (path,targetSet)) as csvfile:
@@ -29,11 +29,11 @@ def readCSV(path, targetSet):
             #fName = path + '/train/' + baseName + '.jpg'
             fName = row[1]
             label = row[2]
-            if osp.isfile(fName):
-                fileNames.append(fName)
-                labels.append(label)
-            else:
-                missingFiles = missingFiles + 1
+            #if osp.isfile(fName):
+            fileNames.append(fName)
+            labels.append(label)
+            #else:
+            #missingFiles = missingFiles + 1
         print('Found %d missing %s files' % (missingFiles, targetSet))
         print('Got %d %s picture filenames' % (len(fileNames), targetSet))
         print('Got %d %s picture labels' % (len(labels), targetSet))
@@ -89,7 +89,8 @@ class LandmarksData(Dataset):
         self.images = []
         print('Preloading...')
         tic = time.time()
-        for image_fn in tqdm(self.filenames):            
+        #for image_fn in tqdm(self.filenames):            
+        for image_fn in self.filenames:
             # load images
             image = Image.open(image_fn)
             # avoid too many opened files bug
@@ -147,7 +148,7 @@ class Batcher(object):
                                       transforms.ToTensor()])
 
         dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
-        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=1)
+        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=50)
         self.dataiter = iter(self.loader)
         #print(len(trainset))
         #print(len(testset))
@@ -168,7 +169,8 @@ def showDataInClass(classId):
         CSVreader = csv.reader(csvfile, delimiter=',')
         fileNames = []
         images = []
-        for row in tqdm(CSVreader):
+        #for row in tqdm(CSVreader):
+        for row in CSVreader:
             if first:
                 first = False
                 continue
