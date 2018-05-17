@@ -20,16 +20,17 @@ def main():
 
     root = '/home/gangwu/projects/landmarks'
     #path = root + '/data/tiny-landmarks'
-    path = root + '/csvFiles'
+    #path = root + '/csvFiles'
+    path = '/home/gangwu/tiny-landmarks'
     exp_path = root + '/experiment/' + args.experiment_name
     os.system('mkdir -p ' + exp_path)
 
-    num_classes = 12
+    num_classes = 120
 
-    trainBatcher = Batcher(path, percent=1.0, preload=False, batchSize=64, targetSet='train')
+    trainBatcher = Batcher(path, percent=1.0, preload=False, batchSize=128, targetSet='train')
     loader = trainBatcher.loader
 
-    devBatcher = Batcher(path, percent=1.0, preload=False, batchSize=128, targetSet='validate')
+    devBatcher = Batcher(path, percent=1.0, preload=False, batchSize=512, targetSet='validate')
     dev_loader = devBatcher.loader
 
     if args.mode == 'train':
@@ -40,7 +41,7 @@ def main():
 
         trainer = Trainer(model, loader, dev_loader, optimizer, device, exp_path)
         print('Start training...')
-        trainer.train(epoch=1)
+        trainer.train(epoch=10)
 
     elif args.mode == 'eval':
         print('Start evaluation on test set...')

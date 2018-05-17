@@ -19,7 +19,8 @@ import time
 #tqdm.monitor_interval = 0
 
 def readCSV(path, targetSet):
-    with open('%s/tiny_tiny_landmarks_%s.csv' % (path,targetSet)) as csvfile:
+    #with open('%s/tiny_tiny_landmarks_%s.csv' % (path,targetSet)) as csvfile:
+    with open('%s/pruned_tiny_landmarks_%s.csv' % (path,targetSet)) as csvfile:
         CSVreader = csv.reader(csvfile, skipinitialspace=True, delimiter=',')
         fileNames = []
         labels = []
@@ -148,7 +149,7 @@ class Batcher(object):
                                       transforms.ToTensor()])
 
         dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
-        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=1)
+        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=10)
         self.dataiter = iter(self.loader)
         #print(len(trainset))
         #print(len(testset))
