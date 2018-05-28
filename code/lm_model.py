@@ -7,14 +7,15 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as func
 
-resnet101 = torchvision.models.resnet101(pretrained=True)
+#resnet = torchvision.models.resnet101(pretrained=True)
+resnet = torchvision.models.resnet50(pretrained=True)
 
 class LandmarksModel(nn.Module):
     def __init__(self, num_classes):
         super(LandmarksModel, self).__init__()
-        self.features = nn.Sequential(*list(resnet101.children())[:-1])
+        self.features = nn.Sequential(*list(resnet.children())[:-1])
         self.classifier = nn.Sequential(
-                            nn.Linear(8192, num_classes)
+                            nn.Linear(resnet.fc.in_features, num_classes)
                           )
         self.modelName = 'resnet'
 

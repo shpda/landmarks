@@ -145,8 +145,15 @@ class Batcher(object):
         # preprocessing stuff
         #myTrans = transforms.Compose([transforms.Resize((32, 32)),
         #                              transforms.ToTensor()])
-        myTrans = transforms.Compose([transforms.CenterCrop(256),
-                                      transforms.ToTensor()])
+        #myTrans = transforms.Compose([transforms.CenterCrop(256),
+        #                              transforms.ToTensor()])
+        myTrans = transforms.Compose([
+            transforms.Resize(256),
+            transforms.RandomCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean = [ 0.485, 0.456, 0.406 ],
+                                  std = [ 0.229, 0.224, 0.225 ])])
 
         dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
         self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=10)

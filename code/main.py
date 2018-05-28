@@ -37,7 +37,8 @@ def main():
         device = getDevice()
         model = LandmarksModel(num_classes).cuda(device)
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
-        optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
+        #optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
+        optimizer = optim.Adam(model.getParameters(), lr=0.0001, betas=(0.9, 0.999))
 
         trainer = Trainer(model, loader, dev_loader, optimizer, device, exp_path)
         print('Start training...')
