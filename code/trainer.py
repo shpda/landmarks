@@ -4,7 +4,7 @@
 
 import torch
 import torch.nn.functional as func
-from utils import saveModel, loadModel, Logger
+from utils import saveModel, loadModel, Logger, tryRestore
 import time
 import sys
 
@@ -24,10 +24,13 @@ class Trainer():
         self.dev_logger = Logger(exp_path, 'dev')
         self.iteration = 0
 
+        cpFile = self.exp_path + '/lm-best.pth'
+        tryRestore(cpFile, model, optimizer)
+
     def train(self, epoch=5):
         self.model.train()  # set training mode
         self.iteration = 0 
-        best_dev_loss = sys.float_info.max
+        best_dev_loss = self.eval()
         for ep in range(epoch):
             epoch_tic = time.time()
             for batch_idx, (data, target) in enumerate(self.loader):
@@ -68,33 +71,37 @@ class Trainer():
                 self.iteration += 1
             epoch_toc = time.time()
             print('End of epoch %i. Seconds took: %.2f s.' % (ep, epoch_toc - epoch_tic))
-            dev_loss = self.devEval()
+            dev_loss = self.eval()
             if dev_loss < best_dev_loss:
                 best_dev_loss = dev_loss
                 saveModel('%s/lm-best.pth' % self.exp_path, self.model, self.optimizer)
 
-    def devEval(self):
+    def eval(self, loader=None, name=''):
+        if loader == None:
+            loader = self.dev_loader
+            name = 'dev'
         self.model.eval()  # set evaluation mode
-        dev_loss = 0
+        loss = 0
         correct = 0
         with torch.no_grad():
-            for data, target in self.dev_loader:
+            for data, target in loader:
                 if self.device != None:
                     data, target = data.to(self.device), target.to(self.device)
 
                 # calculate accumulated loss
                 output = self.model(data)
-                dev_loss += func.nll_loss(output, target, size_average=False).item() # sum up batch loss
+                loss += func.nll_loss(output, target, size_average=False).item() # sum up batch loss
 
                 # calculate accumulated accuracy
                 pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
                 correct += pred.eq(target.view_as(pred)).sum().item()
     
-        dev_loss /= len(self.dev_loader.dataset)
-        accuracy = 100. * correct / len(self.dev_loader.dataset)
-        print('Dev set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(dev_loss, 
-            correct, len(self.dev_loader.dataset), accuracy))
-        self.dev_logger.writeLoss(self.iteration, dev_loss, accuracy)
+        loss /= len(self.loader.dataset)
+        accuracy = 100. * correct / len(self.loader.dataset)
+        print('%s set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(name, loss, 
+            correct, len(self.loader.dataset), accuracy))
+        if name == 'dev':
+            self.dev_logger.writeLoss(self.iteration, loss, accuracy)
 
-        return dev_loss
+        return loss
 

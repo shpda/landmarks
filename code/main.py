@@ -28,18 +28,20 @@ def main():
     # CPU: 10% data
     # GPU: 100% data
     pct = 1.0
-    trainBatcher = Batcher(path, percent=pct, preload=False, batchSize=128, targetSet='train')
-    loader = trainBatcher.loader
 
-    devBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='validate')
-    dev_loader = devBatcher.loader
+    device = getDevice()
+    if device != None:
+        model = LandmarksModel(num_classes).cuda(device)
+    else:
+        model = LandmarksModel(num_classes)
 
     if args.mode == 'train':
-        device = getDevice()
-        if device != None:
-            model = LandmarksModel(num_classes).cuda(device)
-        else:
-            model = LandmarksModel(num_classes)
+        trainBatcher = Batcher(path, percent=pct, preload=False, batchSize=128, targetSet='train')
+        loader = trainBatcher.loader
+    
+        devBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='validate')
+        dev_loader = devBatcher.loader
+
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
         #optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
         optimizer = optim.Adam(model.getParameters(), lr=0.0001, betas=(0.9, 0.999))
@@ -48,8 +50,21 @@ def main():
         print('Start training...')
         trainer.train(epoch=10)
 
-    elif args.mode == 'eval':
+    elif args.mode == 'test':
+        testBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='test')
+        test_loader = testBatcher.loader
+
+        trainer = Trainer(model, None, test_loader, None, device, exp_path)
         print('Start evaluation on test set...')
+        trainer.eval(test_loader, 'test')
+
+    elif args.mode == 'submit':
+        submitBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='test')
+        test_loader = testBatcher.loader
+
+        trainer = Trainer(model, None, test_loader, None, device, exp_path)
+        print('Start evaluation on test set...')
+        trainer.eval(test_loader, 'test')
     else:
         raise Exception('Unknown mode %s. Exiting...' % args.mode)
 

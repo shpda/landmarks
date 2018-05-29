@@ -2,6 +2,7 @@
 import torch
 import argparse
 import csv
+import os.path
 
 def getArgParser():
     parser = argparse.ArgumentParser(description='Landmark Recognition Project')
@@ -32,9 +33,20 @@ def saveModel(checkpoint_path, model, optimizer):
 
 def loadModel(checkpoint_path, model, optimizer):
     state = torch.load(checkpoint_path)
-    model.load_state_dict(state['state_dict'])
-    optimizer.load_state_dict(state['optimizer'])
+    if model != None:
+        model.load_state_dict(state['state_dict'])
+    else:
+        print('model does not exist')
+    if optimizer != None:
+        optimizer.load_state_dict(state['optimizer'])
+    else:
+        print('optimizer does not exist')
     print('model loaded from %s' % checkpoint_path)
+
+def tryRestore(fname, model, optimizer):
+    if os.path.isfile(fname):
+        print('Restoring best checkpoint')
+        loadModel(fname, model, optimizer)
 
 class Logger():
     def __init__(self, exp_path, name):
