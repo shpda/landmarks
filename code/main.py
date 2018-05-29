@@ -48,23 +48,25 @@ def main():
 
         trainer = Trainer(model, loader, dev_loader, optimizer, device, exp_path)
         print('Start training...')
-        trainer.train(epoch=10)
+        trainer.train(epoch=60)
 
     elif args.mode == 'test':
         testBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='test')
         test_loader = testBatcher.loader
 
-        trainer = Trainer(model, None, test_loader, None, device, exp_path)
+        trainer = Trainer(model, None, None, None, device, exp_path)
         print('Start evaluation on test set...')
         trainer.eval(test_loader, 'test')
 
     elif args.mode == 'submit':
+        '''
         submitBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='test')
         test_loader = testBatcher.loader
 
         trainer = Trainer(model, None, test_loader, None, device, exp_path)
         print('Start evaluation on test set...')
         trainer.eval(test_loader, 'test')
+        '''
     else:
         raise Exception('Unknown mode %s. Exiting...' % args.mode)
 

@@ -20,12 +20,15 @@ class Trainer():
         self.log_interval = log_interval 
         self.eval_interval = eval_interval 
         self.save_interval = save_interval 
-        self.train_logger = Logger(exp_path, 'train')
-        self.dev_logger = Logger(exp_path, 'dev')
         self.iteration = 0
 
         cpFile = self.exp_path + '/lm-best.pth'
-        tryRestore(cpFile, model, optimizer)
+        if tryRestore(cpFile, model, optimizer): # append
+            self.train_logger = Logger(exp_path, 'train', 'a')
+            self.dev_logger = Logger(exp_path, 'dev', 'a')
+        else: # create new
+            self.train_logger = Logger(exp_path, 'train', 'w')
+            self.dev_logger = Logger(exp_path, 'dev', 'w')
 
     def train(self, epoch=5):
         self.model.train()  # set training mode
@@ -96,10 +99,10 @@ class Trainer():
                 pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
                 correct += pred.eq(target.view_as(pred)).sum().item()
     
-        loss /= len(self.loader.dataset)
-        accuracy = 100. * correct / len(self.loader.dataset)
-        print('%s set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(name, loss, 
-            correct, len(self.loader.dataset), accuracy))
+        loss /= len(loader.dataset)
+        accuracy = 100. * correct / len(loader.dataset)
+        print('{} set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(name, loss, 
+            correct, len(loader.dataset), accuracy))
         if name == 'dev':
             self.dev_logger.writeLoss(self.iteration, loss, accuracy)
 

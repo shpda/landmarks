@@ -47,11 +47,13 @@ def tryRestore(fname, model, optimizer):
     if os.path.isfile(fname):
         print('Restoring best checkpoint')
         loadModel(fname, model, optimizer)
+        return True
+    return False
 
 class Logger():
-    def __init__(self, exp_path, name):
+    def __init__(self, exp_path, name, writeType):
         fileName = exp_path + '/' + name + '.csv'
-        self.logFile = open(fileName, 'w', 1) # line buffering
+        self.logFile = open(fileName, writeType, 1) # line buffering
         self.writer = csv.writer(self.logFile)
     def writeLoss(self, itr, loss, accuracy = 0.0):
         self.writer.writerow((itr, loss, accuracy))
