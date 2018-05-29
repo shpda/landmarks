@@ -41,7 +41,7 @@ class Logger():
         fileName = exp_path + '/' + name + '.csv'
         self.logFile = open(fileName, 'w', 1) # line buffering
         self.writer = csv.writer(self.logFile)
-    def writeLoss(self, itr, loss):
-        self.writer.writerow((itr, loss))
+    def writeLoss(self, itr, loss, accuracy = 0.0):
+        self.writer.writerow((itr, loss, accuracy))
     def __del__(self):
         self.logFile.close()

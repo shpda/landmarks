@@ -27,7 +27,7 @@ def main():
 
     # CPU: 10% data
     # GPU: 100% data
-    pct = 0.1
+    pct = 1.0
     trainBatcher = Batcher(path, percent=pct, preload=False, batchSize=128, targetSet='train')
     loader = trainBatcher.loader
 
