@@ -47,7 +47,7 @@ class Trainer():
                     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(ep, 
                         batch_idx * len(data), len(self.loader.dataset), 
                         100. * batch_idx / len(self.loader), loss.item()))
-                    self.train_logger.write([iteration, loss.item()])
+                    self.train_logger.writeLoss(iteration, loss.item())
 
                 '''
                 if iteration % self.eval_interval == 0:
@@ -68,7 +68,7 @@ class Trainer():
             print('End of epoch %i. Seconds took: %.2f s.' % (ep, epoch_toc - epoch_tic))
             dev_loss = self.devEval()
             print('Dev Loss: {:.6f}'.format(dev_loss))
-            self.dev_logger.write([iteration, dev_loss])
+            self.dev_logger.writeLoss(iteration, dev_loss)
             if dev_loss < best_dev_loss:
                 best_dev_loss = dev_loss
                 saveModel('%s/lm-best.pth' % self.exp_path, self.model, self.optimizer)

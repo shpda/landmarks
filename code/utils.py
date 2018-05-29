@@ -36,9 +36,9 @@ def loadModel(checkpoint_path, model, optimizer):
 class Logger():
     def __init__(self, exp_path, name):
         fileName = exp_path + '/' + name + '.csv'
-        self.logFile = open(fileName, 'w')
+        self.logFile = open(fileName, 'w', 1) # line buffering
         self.writer = csv.writer(self.logFile)
-    def write(self, inputList):
-        self.writer.writerows(inputList)
+    def writeLoss(self, itr, loss):
+        self.writer.writerow((itr, loss))
     def __del__(self):
         self.logFile.close()
