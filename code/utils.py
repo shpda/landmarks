@@ -1,6 +1,7 @@
 
 import torch
 import argparse
+import csv
 
 def getArgParser():
     parser = argparse.ArgumentParser(description='Landmark Recognition Project')
@@ -32,3 +33,12 @@ def loadModel(checkpoint_path, model, optimizer):
     optimizer.load_state_dict(state['optimizer'])
     print('model loaded from %s' % checkpoint_path)
 
+class Logger():
+    def __init__(self, exp_path, name):
+        fileName = exp_path + '/' + name + '.csv'
+        self.logFile = open(fileName, 'w')
+        self.writer = csv.writer(self.logFile)
+    def write(self, inputList):
+        self.writer.writerows(inputList)
+    def __del__(self):
+        self.logFile.close()

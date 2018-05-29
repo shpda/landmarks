@@ -4,7 +4,7 @@
 
 import torch
 import torch.nn.functional as func
-from utils import saveModel, loadModel
+from utils import saveModel, loadModel, Logger
 import time
 import sys
 
@@ -20,6 +20,8 @@ class Trainer():
         self.log_interval = log_interval 
         self.eval_interval = eval_interval 
         self.save_interval = save_interval 
+        self.train_logger = Logger(exp_path, 'train')
+        self.dev_logger = Logger(exp_path, 'dev')
 
     def train(self, epoch=5):
         self.model.train()  # set training mode
@@ -45,6 +47,7 @@ class Trainer():
                     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(ep, 
                         batch_idx * len(data), len(self.loader.dataset), 
                         100. * batch_idx / len(self.loader), loss.item()))
+                    self.train_logger.write([iteration, loss.item()])
 
                 '''
                 if iteration % self.eval_interval == 0:
@@ -64,6 +67,8 @@ class Trainer():
             epoch_toc = time.time()
             print('End of epoch %i. Seconds took: %.2f s.' % (ep, epoch_toc - epoch_tic))
             dev_loss = self.devEval()
+            print('Dev Loss: {:.6f}'.format(dev_loss))
+            self.dev_logger.write([iteration, dev_loss])
             if dev_loss < best_dev_loss:
                 best_dev_loss = dev_loss
                 saveModel('%s/lm-best.pth' % self.exp_path, self.model, self.optimizer)
