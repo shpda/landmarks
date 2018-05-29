@@ -30,7 +30,8 @@ class Trainer():
         for ep in range(epoch):
             epoch_tic = time.time()
             for batch_idx, (data, target) in enumerate(self.loader):
-                data, target = data.cuda(self.device), target.cuda(self.device)
+                if self.device != None:
+                    data, target = data.cuda(self.device), target.cuda(self.device)
                 self.optimizer.zero_grad()
 
                 # forward pass
@@ -79,7 +80,8 @@ class Trainer():
         correct = 0
         with torch.no_grad():
             for data, target in self.dev_loader:
-                data, target = data.to(self.device), target.to(self.device)
+                if self.device != None:
+                    data, target = data.to(self.device), target.to(self.device)
 
                 # calculate accumulated loss
                 output = self.model(data)

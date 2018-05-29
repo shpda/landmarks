@@ -19,23 +19,27 @@ def main():
     printArgs(args)
 
     root = '/home/gangwu/projects/landmarks'
-    #path = root + '/data/tiny-landmarks'
-    #path = root + '/csvFiles'
     path = '/home/gangwu/tiny-landmarks'
     exp_path = root + '/experiment/' + args.experiment_name
     os.system('mkdir -p ' + exp_path)
 
     num_classes = 120
 
-    trainBatcher = Batcher(path, percent=1.0, preload=False, batchSize=128, targetSet='train')
+    # CPU: 10% data
+    # GPU: 100% data
+    pct = 0.1
+    trainBatcher = Batcher(path, percent=pct, preload=False, batchSize=128, targetSet='train')
     loader = trainBatcher.loader
 
-    devBatcher = Batcher(path, percent=1.0, preload=False, batchSize=512, targetSet='validate')
+    devBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='validate')
     dev_loader = devBatcher.loader
 
     if args.mode == 'train':
         device = getDevice()
-        model = LandmarksModel(num_classes).cuda(device)
+        if device != None:
+            model = LandmarksModel(num_classes).cuda(device)
+        else:
+            model = LandmarksModel(num_classes)
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
         #optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
         optimizer = optim.Adam(model.getParameters(), lr=0.0001, betas=(0.9, 0.999))

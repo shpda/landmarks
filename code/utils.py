@@ -17,7 +17,10 @@ def printArgs(args):
 
 def getDevice():
     use_cuda = torch.cuda.is_available()
-    device = torch.cuda.device(1 if use_cuda else "cpu")
+    if not use_cuda:
+        print('device = cpu')
+        return None
+    device = torch.cuda.device(0) # GPU 0
     print('device = %s' % device)
     return 0
 
