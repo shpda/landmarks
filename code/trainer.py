@@ -7,7 +7,7 @@ import torch.nn.functional as func
 from utils import saveModel, loadModel, Logger, tryRestore
 import time
 import sys
-import tqdm
+from tqdm import tqdm
 import csv
 
 class Trainer():
@@ -115,12 +115,29 @@ class Trainer():
         softmax = torch.nn.Softmax(dim=1).cuda()
         label2res = {}
         with torch.no_grad():
-            for data, ids in loader:
+            for data, ids in tqdm(loader):
                 if self.device != None:
                     data = data.to(self.device)
 
                 output = self.model(data)
                 confidence = softmax(output)
+                maxConf = confidence.max(1)
+                conf = maxConf[0].cpu().numpy()
+                pred = maxConf[1].cpu().numpy()
+                for i in range(len(pred)):
+                    tmp = '%d %.6f' % (idx2label[pred[i]], conf[i])
+                    label2res[ids[i]] = tmp
+        return label2res
+
+    def extract(self, loader):
+        self.model.eval()  # set evaluation mode
+        label2feature = {}
+        with torch.no_grad():
+            for data, ids in tqdm(loader):
+                if self.device != None:
+                    data = data.to(self.device)
+
+                output = self.model(data)
                 maxConf = confidence.max(1)
                 conf = maxConf[0].cpu().numpy()
                 pred = maxConf[1].cpu().numpy()

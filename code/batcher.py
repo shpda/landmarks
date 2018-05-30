@@ -20,32 +20,64 @@ from utils import saveLabel2Idx, loadLabel2Idx
 # Resolve 'Set changed size during iteration'
 #tqdm.monitor_interval = 0
 
-def readCSV(csvFileName, checkMissingFile=False):
+def readCSVhelper(csvFileName, 
+                  checkMissingFile=False,
+                  readLabel=True):
     with open(csvFileName, 'r') as csvFile:
         CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
         fileIds = []
         fileNames = []
         labels = []
         missingFiles = 0
-        for row in CSVreader:
+        print('Reading file %s' % csvFileName)
+        for row in tqdm(CSVreader):
             baseName = row[0]
             #fName = path + '/train/' + baseName + '.jpg'
             fId   = row[0]
             fName = row[1]
-            #label = row[2]
+            if readLabel:
+                label = row[2]
             if checkMissingFile:
                 if not osp.isfile(fName):
                     missingFiles = missingFiles + 1
                     continue
             fileIds.append(fId)
             fileNames.append(fName)
-            #labels.append(label)
-        print('Reading file %s' % csvFile)
+            if readLabel:
+                labels.append(label)
         print('Found %d missing files' % missingFiles)
         print('Got %d picture ids' % (len(fileNames)))
         print('Got %d picture filenames' % (len(fileNames)))
-        print('Got %d picture labels' % (len(labels)))
-        return fileIds, fileNames, labels
+
+        label2idx = {}
+        if readLabel:
+            idx = 0
+            for l in labels:
+                if int(l) not in label2idx.keys():
+                    label2idx[int(l)] = idx
+                    idx += 1
+            saveLabel2Idx('/home/gangwu/projects/landmarks/csvFiles/label2idx.csv', label2idx)
+            print('Got %d unique landmark labels' % (len(label2idx.keys())))
+        return fileIds, fileNames, labels, label2idx
+
+def readCSV(csvFile, checkMissingFile):
+    tic = time.time()
+    # read filenames
+    #csvFile = '%s/pruned_tiny_landmarks_%s.csv' % (self.root,targetSet)
+    fileids, filenames, labels, label2idx = readCSVhelper(csvFile, checkMissingFile)
+    toc = time.time()
+    print("Read filenames took %.2f s" % (toc-tic))
+    return (fileids, filenames, labels, label2idx)
+
+def getImageList(mode, checkMissingFile):
+    rec_train_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_train.csv'
+    rec_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_test.csv'
+
+    if mode == 'train':
+        return readCSV(rec_train_csv, checkMissingFile=True)
+    elif mode == 'test':
+        return readCSV(rec_train_csv, checkMissingFile=True, readLabel=False)
+    return None
 
 class LandmarksData(Dataset):
     """
@@ -53,24 +85,27 @@ class LandmarksData(Dataset):
     """
     def __init__(self,
                  root,
+                 imageList,
                  percent=1.0,
                  transform=None,
-                 preload=False,
-                 targetSet='train'):
+                 num_train=0,
+                 tgtSet='train',
+                 preload=False):
 
         self.images = None
-        self.labels = None
-        self.filenames = []
+
+        if tgtSet=='train':
+            self.filenames = imageList[1][:num_train]
+            self.labels = imageList[2][:num_train]
+        elif tgtSet=='dev':
+            self.filenames = imageList[1][num_train:]
+            self.labels = imageList[2][num_train:]
+        else:
+            print('ERROR: unknow tgtSet')
+
         self.root = root
         self.transform = transform
-        self.label2idx = {}
-
-        tic = time.time()
-        # read filenames
-        csvFile = '%s/pruned_tiny_landmarks_%s.csv' % (self.root,targetSet)
-        _, self.filenames, self.labels = readCSV(csvFile)
-        toc = time.time()
-        print("Read filenames took %.2f s" % (toc-tic))
+        self.label2idx = imageList[3]
 
         fullLen = len(self.filenames)
         shorterLen = int(fullLen * percent)
@@ -78,14 +113,6 @@ class LandmarksData(Dataset):
         self.filenames = self.filenames[:shorterLen]
         self.labels = self.labels[:shorterLen]
 
-        idx = 0
-        for l in self.labels:
-            if int(l) not in self.label2idx.keys():
-                self.label2idx[int(l)] = idx
-                idx += 1
-
-        saveLabel2Idx('/home/gangwu/projects/landmarks/csvFiles/label2idx.csv', self.label2idx)
-        
         # if preload dataset into memory
         if preload:
             self._preload()
@@ -145,18 +172,12 @@ class LandmarksDataSubmit(Dataset):
     """
     Data loader for landmarks submission file.
     """
-    def __init__(self, root, percent=1.0, transform=None):
+    def __init__(self, root, imageList, percent=1.0, transform=None):
 
-        self.fileids = []
-        self.filenames = []
+        self.fileids = imageList[0]
+        self.filenames = imageList[1]
         self.root = root
         self.transform = transform
-
-        tic = time.time()
-        csvFile = '/home/gangwu/projects/landmarks/csvFiles/new_test.csv'
-        self.fileids, self.filenames, _ = readCSV(csvFile, checkMissingFile=True)
-        toc = time.time()
-        print("Read filenames took %.2f s" % (toc-tic))
 
         fullLen = len(self.filenames)
         shorterLen = int(fullLen * percent)
@@ -185,10 +206,12 @@ class Batcher(object):
     """
     def __init__(self,
                  root='/home/gangwu/small-landmarks-data',
+                 imageList=None,
                  percent=1.0, # load a subset of data
                  preload=False,
                  batchSize=64,
-                 targetSet='train',
+                 num_train=0,
+                 tgtSet='train',
                  isSubmit=False):
 
         # preprocessing stuff
@@ -205,11 +228,12 @@ class Batcher(object):
                                   std = [ 0.229, 0.224, 0.225 ])])
 
         if not isSubmit:
-            dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
+            dataset = LandmarksData(root, imageList, percent=percent, preload=preload, 
+                                    transform=myTrans, num_train=num_train, tgtSet=tgtSet)
             self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=10)
             self.dataiter = iter(self.loader)
         else:
-            dataset = LandmarksDataSubmit(root=root, percent=percent, transform=myTrans)
+            dataset = LandmarksDataSubmit(root, imageList, percent=percent, transform=myTrans)
             self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=False, num_workers=10)
             self.dataiter = iter(self.loader)
         #print(len(trainset))
