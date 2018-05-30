@@ -78,3 +78,22 @@ def loadLabel2Idx(fileName):
             idx2label[idx] = label
 
     return label2idx, idx2label
+
+def genResultFile(testCSVfile, resultCSVfile, label2result):
+    outputFile = open(resultCSVfile, 'w')
+    CSVwriter = csv.writer(outputFile)
+    CSVwriter.writerow(('id', 'landmarks'))
+    with open(testCSVfile, 'r') as csvFile:
+        CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
+        first = True
+        for row in CSVreader:
+            if first:
+                first = False
+                continue
+            label = row[0]
+            if label in label2result.keys():
+                CSVwriter.writerow((label, label2result[label]))
+            else:
+                CSVwriter.writerow((label, '0 0.0'))
+    outputFile.close()
+

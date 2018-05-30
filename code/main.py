@@ -66,7 +66,10 @@ def main():
         trainer = Trainer(model, None, None, None, device, exp_path)
         print('Start generating submition file...')
         _, idx2label = loadLabel2Idx('/home/gangwu/projects/landmarks/csvFiles/label2idx.csv')
-        trainer.calc(submit_loader, idx2label)
+        label2res = trainer.calc(submit_loader, idx2label)
+        testCSVfile = ''
+        resultCSVfile = exp_path + '/results.csv'
+        genResultFile(testCSVfile, resultCSVfile, label2res)
 
     else:
         raise Exception('Unknown mode %s. Exiting...' % args.mode)

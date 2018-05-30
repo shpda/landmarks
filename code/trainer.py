@@ -112,10 +112,8 @@ class Trainer():
 
     def calc(self, loader, idx2label):
         self.model.eval()  # set evaluation mode
-        resultFile = open('./results.csv', 'w', 1) 
-        csvWriter = csv.writer(resultFile)
-        csvWriter.writerow(('id', 'landmarks'))
         softmax = torch.nn.Softmax(dim=1).cuda()
+        label2res = {}
         with torch.no_grad():
             for data, ids in loader:
                 if self.device != None:
@@ -128,6 +126,5 @@ class Trainer():
                 pred = maxConf[1].cpu().numpy()
                 for i in range(len(pred)):
                     tmp = '%d %.6f' % (idx2label[pred[i]], conf[i])
-                    csvWriter.writerow((ids[i], tmp))
-        resultFile.close()
-
+                    label2res[ids[i]] = tmp
+        return label2res
