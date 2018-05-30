@@ -15,30 +15,37 @@ import matplotlib.pyplot as plt
 import csv
 import time
 
+from utils import saveLabel2Idx, loadLabel2Idx
+
 # Resolve 'Set changed size during iteration'
 #tqdm.monitor_interval = 0
 
-def readCSV(path, targetSet):
-    #with open('%s/tiny_tiny_landmarks_%s.csv' % (path,targetSet)) as csvfile:
-    with open('%s/pruned_tiny_landmarks_%s.csv' % (path,targetSet)) as csvfile:
-        CSVreader = csv.reader(csvfile, skipinitialspace=True, delimiter=',')
+def readCSV(csvFileName, checkMissingFile=False):
+    with open(csvFileName, 'r') as csvFile:
+        CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
+        fileIds = []
         fileNames = []
         labels = []
         missingFiles = 0
         for row in CSVreader:
             baseName = row[0]
             #fName = path + '/train/' + baseName + '.jpg'
+            fId   = row[0]
             fName = row[1]
-            label = row[2]
-            #if osp.isfile(fName):
+            #label = row[2]
+            if checkMissingFile:
+                if not osp.isfile(fName):
+                    missingFiles = missingFiles + 1
+                    continue
+            fileIds.append(fId)
             fileNames.append(fName)
-            labels.append(label)
-            #else:
-            #missingFiles = missingFiles + 1
-        print('Found %d missing %s files' % (missingFiles, targetSet))
-        print('Got %d %s picture filenames' % (len(fileNames), targetSet))
-        print('Got %d %s picture labels' % (len(labels), targetSet))
-        return fileNames, labels
+            #labels.append(label)
+        print('Reading file %s' % csvFile)
+        print('Found %d missing files' % missingFiles)
+        print('Got %d picture ids' % (len(fileNames)))
+        print('Got %d picture filenames' % (len(fileNames)))
+        print('Got %d picture labels' % (len(labels)))
+        return fileIds, fileNames, labels
 
 class LandmarksData(Dataset):
     """
@@ -60,7 +67,8 @@ class LandmarksData(Dataset):
 
         tic = time.time()
         # read filenames
-        self.filenames, self.labels = readCSV(self.root, targetSet)
+        csvFile = '%s/pruned_tiny_landmarks_%s.csv' % (self.root,targetSet)
+        _, self.filenames, self.labels = readCSV(csvFile)
         toc = time.time()
         print("Read filenames took %.2f s" % (toc-tic))
 
@@ -75,6 +83,8 @@ class LandmarksData(Dataset):
             if int(l) not in self.label2idx.keys():
                 self.label2idx[int(l)] = idx
                 idx += 1
+
+        saveLabel2Idx('/home/gangwu/projects/landmarks/csvFiles/label2idx.csv', self.label2idx)
         
         # if preload dataset into memory
         if preload:
@@ -131,6 +141,44 @@ class LandmarksData(Dataset):
         """
         return self.len
 
+class LandmarksDataSubmit(Dataset):
+    """
+    Data loader for landmarks submission file.
+    """
+    def __init__(self, root, percent=1.0, transform=None):
+
+        self.fileids = []
+        self.filenames = []
+        self.root = root
+        self.transform = transform
+
+        tic = time.time()
+        csvFile = '/home/gangwu/projects/landmarks/csvFiles/new_test.csv'
+        self.fileids, self.filenames, _ = readCSV(csvFile, checkMissingFile=True)
+        toc = time.time()
+        print("Read filenames took %.2f s" % (toc-tic))
+
+        fullLen = len(self.filenames)
+        shorterLen = int(fullLen * percent)
+        print('Percentage to load = {}/{} ({:.0f}%)'.format(shorterLen, fullLen, 100. * percent))
+        self.filenames = self.filenames[:shorterLen]
+        self.fileids = self.fileids[:shorterLen]
+
+        self.len = len(self.filenames)
+                              
+    def __getitem__(self, index):
+
+        image_fn = self.filenames[index]
+        image_id = self.fileids[index]
+        image = Image.open(image_fn)
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image, image_id
+
+    def __len__(self):
+        return self.len
+
 class Batcher(object):
     """
     Get preprocessed data batches
@@ -140,7 +188,8 @@ class Batcher(object):
                  percent=1.0, # load a subset of data
                  preload=False,
                  batchSize=64,
-                 targetSet='train'):
+                 targetSet='train',
+                 isSubmit=False):
 
         # preprocessing stuff
         #myTrans = transforms.Compose([transforms.Resize((32, 32)),
@@ -155,9 +204,14 @@ class Batcher(object):
             transforms.Normalize(mean = [ 0.485, 0.456, 0.406 ],
                                   std = [ 0.229, 0.224, 0.225 ])])
 
-        dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
-        self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=10)
-        self.dataiter = iter(self.loader)
+        if not isSubmit:
+            dataset = LandmarksData(root=root, percent=percent, preload=preload, transform=myTrans, targetSet=targetSet)
+            self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=10)
+            self.dataiter = iter(self.loader)
+        else:
+            dataset = LandmarksDataSubmit(root=root, percent=percent, transform=myTrans)
+            self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=False, num_workers=10)
+            self.dataiter = iter(self.loader)
         #print(len(trainset))
         #print(len(testset))
 

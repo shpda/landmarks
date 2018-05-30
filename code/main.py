@@ -59,14 +59,15 @@ def main():
         trainer.eval(test_loader, 'test')
 
     elif args.mode == 'submit':
-        '''
-        submitBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='test')
-        test_loader = testBatcher.loader
+        path = '/projects/landmarks/csvFiles'
+        submitBatcher = Batcher(path, percent=pct, batchSize=512, isSubmit=True)
+        submit_loader = submitBatcher.loader
 
-        trainer = Trainer(model, None, test_loader, None, device, exp_path)
-        print('Start evaluation on test set...')
-        trainer.eval(test_loader, 'test')
-        '''
+        trainer = Trainer(model, None, None, None, device, exp_path)
+        print('Start generating submition file...')
+        _, idx2label = loadLabel2Idx('/home/gangwu/projects/landmarks/csvFiles/label2idx.csv')
+        trainer.calc(submit_loader, idx2label)
+
     else:
         raise Exception('Unknown mode %s. Exiting...' % args.mode)
 

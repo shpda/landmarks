@@ -59,3 +59,22 @@ class Logger():
         self.writer.writerow((itr, loss, accuracy))
     def __del__(self):
         self.logFile.close()
+
+def saveLabel2Idx(fileName, label2idx):
+    with open(fileName, 'w') as csvFile:
+        writter = csv.writer(csvFile)
+        for label, idx in label2idx.items():
+            writter.writerow((idx, label))
+
+def loadLabel2Idx(fileName):
+    label2idx = {}
+    idx2label = {}
+    with open(fileName, 'r') as csvFile:
+        CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
+        for row in CSVreader:
+            idx = int(row[0])
+            label = int(row[1])
+            label2idx[label] = idx
+            idx2label[idx] = label
+
+    return label2idx, idx2label

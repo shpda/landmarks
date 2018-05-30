@@ -7,6 +7,8 @@ import torch.nn.functional as func
 from utils import saveModel, loadModel, Logger, tryRestore
 import time
 import sys
+import tqdm
+import csv
 
 class Trainer():
     def __init__(self, model, loader, dev_loader, optimizer, device, exp_path, 
@@ -107,4 +109,25 @@ class Trainer():
             self.dev_logger.writeLoss(self.iteration, loss, accuracy)
 
         return loss
+
+    def calc(self, loader, idx2label):
+        self.model.eval()  # set evaluation mode
+        resultFile = open('./results.csv', 'w', 1) 
+        csvWriter = csv.writer(resultFile)
+        csvWriter.writerow(('id', 'landmarks'))
+        softmax = torch.nn.Softmax(dim=1).cuda()
+        with torch.no_grad():
+            for data, ids in loader:
+                if self.device != None:
+                    data = data.to(self.device)
+
+                output = self.model(data)
+                confidence = softmax(output)
+                maxConf = confidence.max(1)
+                conf = maxConf[0].cpu().numpy()
+                pred = maxConf[1].cpu().numpy()
+                for i in range(len(pred)):
+                    tmp = '%d %.6f' % (idx2label[pred[i]], conf[i])
+                    csvWriter.writerow((ids[i], tmp))
+        resultFile.close()
 

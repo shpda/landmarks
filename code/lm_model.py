@@ -19,8 +19,8 @@ class LandmarksModel(nn.Module):
                           )
         self.modelName = 'resnet'
 
-        for p in self.features.parameters():
-            p.requires_grad = False
+        #for p in self.features.parameters():
+        #    p.requires_grad = False
 
 
     def forward(self, x):
