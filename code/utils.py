@@ -43,10 +43,27 @@ def loadModel(checkpoint_path, model, optimizer):
         print('optimizer does not exist')
     print('model loaded from %s' % checkpoint_path)
 
-def tryRestore(fname, model, optimizer):
+def loadExtModel(checkpoint_path, model):
+    state = torch.load(checkpoint_path)
+    states_to_load = {}
+    for name, param in state['state_dict'].items():
+        if name.startswith('conv'):
+            states_to_load[name] = param
+    if model != None:
+        model_state = model.state_dict()
+        model_state.update(states_to_load)
+        model.load_state_dict(model_state)
+    else:
+        print('model does not exist')
+    print('model loaded from %s' % checkpoint_path)
+
+def tryRestore(mode, fname, model, optimizer):
     if os.path.isfile(fname):
         print('Restoring best checkpoint')
-        loadModel(fname, model, optimizer)
+        if mode != 'extract':
+            loadModel(fname, model, optimizer)
+        else:
+            loadExtModel(fname, model)
         return True
     return False
 
@@ -85,15 +102,35 @@ def genResultFile(testCSVfile, resultCSVfile, label2result):
     CSVwriter.writerow(('id', 'landmarks'))
     with open(testCSVfile, 'r') as csvFile:
         CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
-        first = True
         for row in CSVreader:
-            if first:
-                first = False
-                continue
             label = row[0]
             if label in label2result.keys():
                 CSVwriter.writerow((label, label2result[label]))
             else:
                 CSVwriter.writerow((label, '0 0.0'))
     outputFile.close()
+    print('generated result file at %s' % resultCSVfile)
+
+def genRetResultFile(testCSVfile, resultCSVfile, neighborMatrix, idxLabel, queryLabel):
+    label2result = {}
+    for i in range(len(neighborMatrix)):
+        neighbors = neighborMatrix[i]
+        nbrLabels = ''
+        for nbr in neighbors:
+            nbrLabels += idxLabel[nbr]
+            nbrLabels += ' '
+        label2result[queryLabel[i]] = nbrLabels
+    outputFile = open(resultCSVfile, 'w')
+    CSVwriter = csv.writer(outputFile)
+    CSVwriter.writerow(('id', 'images'))
+    with open(testCSVfile, 'r') as csvFile:
+        CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
+        for row in CSVreader:
+            label = row[0]
+            if label in label2result.keys():
+                CSVwriter.writerow((label, label2result[label]))
+            else:
+                CSVwriter.writerow((label, ' '))
+    outputFile.close()
+    print('generated result file at %s' % resultCSVfile)
 

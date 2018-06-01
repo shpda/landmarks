@@ -60,23 +60,36 @@ def readCSVhelper(csvFileName,
             print('Got %d unique landmark labels' % (len(label2idx.keys())))
         return fileIds, fileNames, labels, label2idx
 
-def readCSV(csvFile, checkMissingFile):
+def readCSV(csvFile, checkMissingFile, readLabel=True):
     tic = time.time()
     # read filenames
     #csvFile = '%s/pruned_tiny_landmarks_%s.csv' % (self.root,targetSet)
-    fileids, filenames, labels, label2idx = readCSVhelper(csvFile, checkMissingFile)
+    fileids, filenames, labels, label2idx = readCSVhelper(csvFile, checkMissingFile, readLabel)
     toc = time.time()
     print("Read filenames took %.2f s" % (toc-tic))
     return (fileids, filenames, labels, label2idx)
 
 def getImageList(mode, checkMissingFile):
-    rec_train_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_train.csv'
-    rec_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_test.csv'
+    #rec_train_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_train.csv'
+    #rec_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_test.csv'
+    #ret_index_csv = '/home/gangwu/projects/landmarks/csvFiles/new_ret_index.csv'
+    #ret_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_ret_test.csv'
+    #ret_index_csv = '/home/gangwu/projects/landmarks/csvFiles/small_new_ret_index.csv'
+    #ret_test_csv = '/home/gangwu/projects/landmarks/csvFiles/small_new_ret_test.csv'
+
+    rec_train_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_train-256.csv'
+    rec_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_test-256.csv'
+    ret_index_csv = '/home/gangwu/projects/landmarks/csvFiles/new_ret_index-256.csv'
+    ret_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_ret_test-256.csv'
 
     if mode == 'train':
         return readCSV(rec_train_csv, checkMissingFile=True)
-    elif mode == 'test':
-        return readCSV(rec_train_csv, checkMissingFile=True, readLabel=False)
+    elif mode == 'submit0':
+        return readCSV(rec_test_csv, checkMissingFile=True, readLabel=False)
+    elif mode == 'extract':
+        indexImages = readCSV(ret_index_csv, checkMissingFile=True, readLabel=False)
+        queryImages = readCSV(ret_test_csv, checkMissingFile=True, readLabel=False)
+        return (indexImages, queryImages)
     return None
 
 class LandmarksData(Dataset):
@@ -84,7 +97,6 @@ class LandmarksData(Dataset):
     Data loader for landmarks data.
     """
     def __init__(self,
-                 root,
                  imageList,
                  percent=1.0,
                  transform=None,
@@ -103,7 +115,6 @@ class LandmarksData(Dataset):
         else:
             print('ERROR: unknow tgtSet')
 
-        self.root = root
         self.transform = transform
         self.label2idx = imageList[3]
 
@@ -172,11 +183,10 @@ class LandmarksDataSubmit(Dataset):
     """
     Data loader for landmarks submission file.
     """
-    def __init__(self, root, imageList, percent=1.0, transform=None):
+    def __init__(self, imageList, percent=1.0, transform=None):
 
         self.fileids = imageList[0]
         self.filenames = imageList[1]
-        self.root = root
         self.transform = transform
 
         fullLen = len(self.filenames)
@@ -205,7 +215,6 @@ class Batcher(object):
     Get preprocessed data batches
     """
     def __init__(self,
-                 root='/home/gangwu/small-landmarks-data',
                  imageList=None,
                  percent=1.0, # load a subset of data
                  preload=False,
@@ -220,7 +229,7 @@ class Batcher(object):
         #myTrans = transforms.Compose([transforms.CenterCrop(256),
         #                              transforms.ToTensor()])
         myTrans = transforms.Compose([
-            transforms.Resize(256),
+            #transforms.Resize(256),
             transforms.RandomCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -228,12 +237,12 @@ class Batcher(object):
                                   std = [ 0.229, 0.224, 0.225 ])])
 
         if not isSubmit:
-            dataset = LandmarksData(root, imageList, percent=percent, preload=preload, 
+            dataset = LandmarksData(imageList, percent=percent, preload=preload, 
                                     transform=myTrans, num_train=num_train, tgtSet=tgtSet)
             self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=True, num_workers=10)
             self.dataiter = iter(self.loader)
         else:
-            dataset = LandmarksDataSubmit(root, imageList, percent=percent, transform=myTrans)
+            dataset = LandmarksDataSubmit(imageList, percent=percent, transform=myTrans)
             self.loader = DataLoader(dataset, batch_size=batchSize, shuffle=False, num_workers=10)
             self.dataiter = iter(self.loader)
         #print(len(trainset))

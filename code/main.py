@@ -3,95 +3,142 @@
 # main entry point
 
 from utils import *
-from lm_model import LandmarksModel
+from lm_model import getModel
 from batcher import Batcher, getImageList
 from trainer import Trainer
 
 import os
 import torch.optim as optim
 import numpy as np
+import faiss
+import time
 
 parser = getArgParser()
 
 def main():
-    print('Landmark Recogintion Project')
+    print('Landmark Recogintion & Retrieval Project')
 
     args = parser.parse_args()
     printArgs(args)
 
     root = '/home/gangwu/projects/landmarks'
-    path = '/home/gangwu/tiny-landmarks'
     exp_path = root + '/experiment/' + args.experiment_name
     os.system('mkdir -p ' + exp_path)
 
+    #input_size = 128
+    input_size = 224 # after crop
+    testCSVfile = '/home/gangwu/projects/landmarks/csvFiles/new_ret_test-256.csv'
+
+    if args.mode == 'submit1':
+        print('Loading features...')
+        idxLabelPath = exp_path + '/idxLabel.npy'
+        idxFeaturePath = exp_path + '/idxFeature.npy'
+        idxLabel = np.load(idxLabelPath)
+        idxFeature = np.load(idxFeaturePath)
+        print('idxLabel shape: %s' % str(idxLabel.shape))
+        print('idxFeature shape: %s' % str(idxFeature.shape))
+
+        queryLabelPath = exp_path + '/queryLabel.npy'
+        queryFeaturePath = exp_path + '/queryFeature.npy'
+        queryLabel = np.load(queryLabelPath)
+        queryFeature = np.load(queryFeaturePath)
+        print('queryLabel shape: %s' % str(queryLabel.shape))
+        print('queryFeature shape: %s' % str(queryFeature.shape))
+
+        print('Searching neighbors...')
+        tic = time.time()
+        dimension = len(idxFeature[0])
+        print('feature dimension = %d' % dimension)
+        index = faiss.IndexFlatL2(dimension)
+        res = faiss.StandardGpuResources()
+        #res.setTempMemory(512 * 1024 * 1024)
+        res.setTempMemory(512 * 2048 * 2048)
+        gpu_index = faiss.index_cpu_to_gpu(res, 0, index)
+        gpu_index.add(np.ceil(idxFeature))
+        print('total num index = %d' % gpu_index.ntotal)
+        _, neighborMatrix = gpu_index.search(np.ceil(queryFeature), 100)
+        print(neighborMatrix.shape)
+        toc = time.time()
+        print("Search neighbors took %.2f s" % (toc-tic))
+
+        print('Start generating landmarks retrieval submition file...')
+        resultCSVfile = exp_path + '/ret_results.csv'
+        genRetResultFile(testCSVfile, resultCSVfile, neighborMatrix, idxLabel, queryLabel)
+
+        return
+
     imageList = getImageList(args.mode, checkMissingFile=True)
 
-    #num_classes = 120
-    num_classes = len(imageList[3].keys())
-    num_train   = int(len(imageList[0]) * 0.95)
+    #num_classes = len(imageList[3].keys())
+    num_classes = 14951
+    num_train   = int(len(imageList[0]) * 0.98)
     num_dev     = len(imageList[0]) - num_train
     print('%d classes' % num_classes)
     print('%d train pictures' % num_train)
     print('%d dev pictures' % num_dev)
 
     # percentage of data to load
-    pct = 0.01 
+    pct = 1.0 
 
     device = getDevice()
-    if device != None:
-        model = LandmarksModel(num_classes).cuda(device)
-    else:
-        model = LandmarksModel(num_classes)
+    model = getModel(args.mode, device, num_classes, input_size)
 
     if args.mode == 'train':
-        trainBatcher = Batcher(path, imageList, percent=pct, preload=False, batchSize=128, num_train=num_train, tgtSet='train')
+        trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=100, num_train=num_train, tgtSet='train')
         loader = trainBatcher.loader
     
-        devBatcher = Batcher(path, imageList, percent=pct, preload=False, batchSize=512, num_train=num_train, tgtSet='dev')
+        devBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=256, num_train=num_train, tgtSet='dev')
         dev_loader = devBatcher.loader
 
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
         #optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
         optimizer = optim.Adam(model.getParameters(), lr=0.0001, betas=(0.9, 0.999))
 
-        trainer = Trainer(model, loader, dev_loader, optimizer, device, exp_path)
+        trainer = Trainer(args.mode, model, loader, dev_loader, optimizer, device, exp_path)
         print('Start training...')
         trainer.train(epoch=60)
 
-    elif args.mode == 'test':
-        testBatcher = Batcher(path, percent=pct, preload=False, batchSize=512, targetSet='test')
-        test_loader = testBatcher.loader
+        '''
+        elif args.mode == 'test':
+            testBatcher = Batcher(percent=pct, preload=False, batchSize=512, targetSet='test')
+            test_loader = testBatcher.loader
+    
+            trainer = Trainer(model, None, None, None, device, exp_path)
+            print('Start evaluation on test set...')
+            trainer.eval(test_loader, 'test')
+        '''
 
-        trainer = Trainer(model, None, None, None, device, exp_path)
-        print('Start evaluation on test set...')
-        trainer.eval(test_loader, 'test')
-
-    elif args.mode == 'submit':
-        path = '/projects/landmarks/csvFiles'
-        submitBatcher = Batcher(path, percent=pct, batchSize=512, isSubmit=True)
+    elif args.mode == 'submit0':
+        submitBatcher = Batcher(imageList, percent=pct, batchSize=512, isSubmit=True)
         submit_loader = submitBatcher.loader
 
-        trainer = Trainer(model, None, None, None, device, exp_path)
-        print('Start generating submition file...')
+        trainer = Trainer(args.mode, model, None, None, None, device, exp_path)
+        print('Start generating landmarks recognization submition file...')
         _, idx2label = loadLabel2Idx('/home/gangwu/projects/landmarks/csvFiles/label2idx.csv')
         label2res = trainer.calc(submit_loader, idx2label)
-        testCSVfile = '/home/gangwu/projects/landmarks/csvFiles'
         resultCSVfile = exp_path + '/results.csv'
         genResultFile(testCSVfile, resultCSVfile, label2res)
 
     elif args.mode == 'extract':
-        path = '/projects/landmarks/csvFiles'
-        idxImageBatcher = Batcher(path, percent=pct, batchSize=512, isSubmit=True)
-        queryImageBatcher = Batcher(path, percent=pct, batchSize=512, isSubmit=True)
+        idxImageBatcher = Batcher(imageList[0], percent=pct, batchSize=512, isSubmit=True)
+        queryImageBatcher = Batcher(imageList[1], percent=pct, batchSize=512, isSubmit=True)
 
-        trainer = Trainer(model, None, None, None, device, exp_path)
+        trainer = Trainer(args.mode, model, None, None, None, device, exp_path)
         print('Start extracting index image features...')
-        label2idxFeature   = trainer.extract(idxImageBatcher.loader)
-        np.save(exp_path + '/label2idxFeature.npy', label2idxFeature)
+        idxLabel, idxFeature = trainer.extract(idxImageBatcher.loader)
+        idxLabelPath = exp_path + '/idxLabel.npy'
+        idxFeaturePath = exp_path + '/idxFeature.npy'
+        np.save(idxLabelPath, idxLabel)
+        np.save(idxFeaturePath, idxFeature)
+        print('Extracted features saved at %s' % idxFeaturePath)
 
         print('Start extracting query image features...')
-        label2queryFeature = trainer.extract(queryImageBatcher.loader)
-        np.save(exp_path + '/label2queryFeature.npy', label2queryFeature)
+        queryLabel, queryFeature = trainer.extract(queryImageBatcher.loader)
+        queryLabelPath = exp_path + '/queryLabel.npy'
+        queryFeaturePath = exp_path + '/queryFeature.npy'
+        np.save(queryLabelPath, queryLabel)
+        np.save(queryFeaturePath, queryFeature)
+        print('Extracted features saved at %s' % queryFeaturePath)
 
     else:
         raise Exception('Unknown mode %s. Exiting...' % args.mode)

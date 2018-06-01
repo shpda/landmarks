@@ -10,9 +10,11 @@ import sys
 from tqdm import tqdm
 import csv
 
+import numpy as np
+
 class Trainer():
-    def __init__(self, model, loader, dev_loader, optimizer, device, exp_path, 
-                log_interval=5, eval_interval=20, save_interval=20):
+    def __init__(self, mode, model, loader, dev_loader, optimizer, device, exp_path, 
+                log_interval=5, eval_interval=500, save_interval=500):
         self.model = model
         self.loader = loader
         self.dev_loader = dev_loader
@@ -25,7 +27,7 @@ class Trainer():
         self.iteration = 0
 
         cpFile = self.exp_path + '/lm-best.pth'
-        if tryRestore(cpFile, model, optimizer): # append
+        if tryRestore(mode, cpFile, model, optimizer): # append
             self.train_logger = Logger(exp_path, 'train', 'a')
             self.dev_logger = Logger(exp_path, 'dev', 'a')
         else: # create new
@@ -45,6 +47,7 @@ class Trainer():
 
                 # forward pass
                 output = self.model(data)
+                output = func.log_softmax(output, dim=1)
                 loss = func.nll_loss(output, target)
 
                 # backward pass
@@ -59,27 +62,22 @@ class Trainer():
                         100. * batch_idx / len(self.loader), loss.item()))
                     self.train_logger.writeLoss(self.iteration, loss.item())
 
-                '''
-                if self.iteration % self.eval_interval == 0:
-                    dev_loss = self.devEval()
+                if self.iteration != 0 and self.iteration % self.eval_interval == 0:
+                    dev_loss = self.eval()
                     if dev_loss < best_dev_loss:
                         best_dev_loss = dev_loss
                         saveModel('%s/lm-best.pth' % self.exp_path, 
                                   self.model, self.optimizer)
-                '''
-
-                '''
-                if self.iteration % self.save_interval == 0:
-                    self.saveModel()
-                '''
+                #if self.iteration % self.save_interval == 0:
+                #    self.saveModel()
 
                 self.iteration += 1
             epoch_toc = time.time()
             print('End of epoch %i. Seconds took: %.2f s.' % (ep, epoch_toc - epoch_tic))
-            dev_loss = self.eval()
-            if dev_loss < best_dev_loss:
-                best_dev_loss = dev_loss
-                saveModel('%s/lm-best.pth' % self.exp_path, self.model, self.optimizer)
+            #dev_loss = self.eval()
+            #if dev_loss < best_dev_loss:
+            #    best_dev_loss = dev_loss
+            #    saveModel('%s/lm-best.pth' % self.exp_path, self.model, self.optimizer)
 
     def eval(self, loader=None, name=''):
         if loader == None:
@@ -95,6 +93,7 @@ class Trainer():
 
                 # calculate accumulated loss
                 output = self.model(data)
+                output = func.log_softmax(output, dim=1)
                 loss += func.nll_loss(output, target, size_average=False).item() # sum up batch loss
 
                 # calculate accumulated accuracy
@@ -131,17 +130,17 @@ class Trainer():
 
     def extract(self, loader):
         self.model.eval()  # set evaluation mode
-        label2feature = {}
+        label = []
+        feature = []
         with torch.no_grad():
             for data, ids in tqdm(loader):
                 if self.device != None:
                     data = data.to(self.device)
 
                 output = self.model(data)
-                maxConf = confidence.max(1)
-                conf = maxConf[0].cpu().numpy()
-                pred = maxConf[1].cpu().numpy()
-                for i in range(len(pred)):
-                    tmp = '%d %.6f' % (idx2label[pred[i]], conf[i])
-                    label2res[ids[i]] = tmp
-        return label2res
+                output = np.squeeze(output.cpu().numpy())
+                for i in range(output.shape[0]):
+                    label.append(ids[i])
+                    feature.append(output[i])
+        return label, feature
+
