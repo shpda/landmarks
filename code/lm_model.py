@@ -10,10 +10,12 @@ import torch.nn.functional as func
 def getModel(mode, device, num_classes, input_size):
     model = None
 
-    if mode != 'extract':
+    if mode == 'train' or mode == 'submit0':
         model = LandmarksModel(num_classes, input_size)
-    else:
+    elif mode == 'extract':
         model = FeatureExtractModel(num_classes, input_size)
+    else:
+        return None
 
     if device != None:
         model = model.cuda(device)

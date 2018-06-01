@@ -25,6 +25,14 @@ def getDevice():
     print('device = %s' % device)
     return 0
 
+def splitTrainDevSet(imageList, ratio)
+    if imageList != None and len(imageList) > 0:
+        num_train   = int(len(imageList[0]) * ratio)
+        num_dev     = len(imageList[0]) - num_train
+        print('%d train pictures' % num_train)
+        print('%d dev pictures' % num_dev)
+    return num_train, num_dev
+
 def saveModel(checkpoint_path, model, optimizer):
     state = {'state_dict': model.state_dict(),
              'optimizer' : optimizer.state_dict()}
@@ -43,6 +51,7 @@ def loadModel(checkpoint_path, model, optimizer):
         print('optimizer does not exist')
     print('model loaded from %s' % checkpoint_path)
 
+#load feature extraction model
 def loadExtModel(checkpoint_path, model):
     state = torch.load(checkpoint_path)
     states_to_load = {}
@@ -96,10 +105,13 @@ def loadLabel2Idx(fileName):
 
     return label2idx, idx2label
 
-def genResultFile(testCSVfile, resultCSVfile, label2result):
+def genResultFile(mode, testCSVfile, resultCSVfile, label2result):
     outputFile = open(resultCSVfile, 'w')
     CSVwriter = csv.writer(outputFile)
-    CSVwriter.writerow(('id', 'landmarks'))
+    if mode == 'submit0':
+        CSVwriter.writerow(('id', 'landmarks'))
+    elif mode == 'submit1':
+        CSVwriter.writerow(('id', 'images'))
     with open(testCSVfile, 'r') as csvFile:
         CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
         for row in CSVreader:
@@ -107,30 +119,10 @@ def genResultFile(testCSVfile, resultCSVfile, label2result):
             if label in label2result.keys():
                 CSVwriter.writerow((label, label2result[label]))
             else:
-                CSVwriter.writerow((label, '0 0.0'))
-    outputFile.close()
-    print('generated result file at %s' % resultCSVfile)
-
-def genRetResultFile(testCSVfile, resultCSVfile, neighborMatrix, idxLabel, queryLabel):
-    label2result = {}
-    for i in range(len(neighborMatrix)):
-        neighbors = neighborMatrix[i]
-        nbrLabels = ''
-        for nbr in neighbors:
-            nbrLabels += idxLabel[nbr]
-            nbrLabels += ' '
-        label2result[queryLabel[i]] = nbrLabels
-    outputFile = open(resultCSVfile, 'w')
-    CSVwriter = csv.writer(outputFile)
-    CSVwriter.writerow(('id', 'images'))
-    with open(testCSVfile, 'r') as csvFile:
-        CSVreader = csv.reader(csvFile, skipinitialspace=True, delimiter=',')
-        for row in CSVreader:
-            label = row[0]
-            if label in label2result.keys():
-                CSVwriter.writerow((label, label2result[label]))
-            else:
-                CSVwriter.writerow((label, ' '))
+                if mode == 'submit0':
+                    CSVwriter.writerow((label, '0 0.0'))
+                elif mode == 'submit1':
+                    CSVwriter.writerow((label, ' '))
     outputFile.close()
     print('generated result file at %s' % resultCSVfile)
 

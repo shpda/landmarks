@@ -6,11 +6,11 @@ from utils import *
 from lm_model import getModel
 from batcher import Batcher, getImageList
 from trainer import Trainer
+from nnsearch import nnsearch
 
 import os
 import torch.optim as optim
 import numpy as np
-import faiss
 import time
 
 parser = getArgParser()
@@ -29,53 +29,12 @@ def main():
     input_size = 224 # after crop
     testCSVfile = '/home/gangwu/projects/landmarks/csvFiles/new_ret_test-256.csv'
 
-    if args.mode == 'submit1':
-        print('Loading features...')
-        idxLabelPath = exp_path + '/idxLabel.npy'
-        idxFeaturePath = exp_path + '/idxFeature.npy'
-        idxLabel = np.load(idxLabelPath)
-        idxFeature = np.load(idxFeaturePath)
-        print('idxLabel shape: %s' % str(idxLabel.shape))
-        print('idxFeature shape: %s' % str(idxFeature.shape))
-
-        queryLabelPath = exp_path + '/queryLabel.npy'
-        queryFeaturePath = exp_path + '/queryFeature.npy'
-        queryLabel = np.load(queryLabelPath)
-        queryFeature = np.load(queryFeaturePath)
-        print('queryLabel shape: %s' % str(queryLabel.shape))
-        print('queryFeature shape: %s' % str(queryFeature.shape))
-
-        print('Searching neighbors...')
-        tic = time.time()
-        dimension = len(idxFeature[0])
-        print('feature dimension = %d' % dimension)
-        index = faiss.IndexFlatL2(dimension)
-        res = faiss.StandardGpuResources()
-        #res.setTempMemory(512 * 1024 * 1024)
-        res.setTempMemory(512 * 2048 * 2048)
-        gpu_index = faiss.index_cpu_to_gpu(res, 0, index)
-        gpu_index.add(np.ceil(idxFeature))
-        print('total num index = %d' % gpu_index.ntotal)
-        _, neighborMatrix = gpu_index.search(np.ceil(queryFeature), 100)
-        print(neighborMatrix.shape)
-        toc = time.time()
-        print("Search neighbors took %.2f s" % (toc-tic))
-
-        print('Start generating landmarks retrieval submition file...')
-        resultCSVfile = exp_path + '/ret_results.csv'
-        genRetResultFile(testCSVfile, resultCSVfile, neighborMatrix, idxLabel, queryLabel)
-
-        return
-
     imageList = getImageList(args.mode, checkMissingFile=True)
 
     #num_classes = len(imageList[3].keys())
     num_classes = 14951
-    num_train   = int(len(imageList[0]) * 0.98)
-    num_dev     = len(imageList[0]) - num_train
     print('%d classes' % num_classes)
-    print('%d train pictures' % num_train)
-    print('%d dev pictures' % num_dev)
+    num_train, num_dev = splitTrainDevSet(imageList, 0.98)
 
     # percentage of data to load
     pct = 1.0 
@@ -116,8 +75,8 @@ def main():
         print('Start generating landmarks recognization submition file...')
         _, idx2label = loadLabel2Idx('/home/gangwu/projects/landmarks/csvFiles/label2idx.csv')
         label2res = trainer.calc(submit_loader, idx2label)
-        resultCSVfile = exp_path + '/results.csv'
-        genResultFile(testCSVfile, resultCSVfile, label2res)
+        resultCSVfile = exp_path + '/rec_results.csv'
+        genResultFile(args.mode, testCSVfile, resultCSVfile, label2res)
 
     elif args.mode == 'extract':
         idxImageBatcher = Batcher(imageList[0], percent=pct, batchSize=512, isSubmit=True)
@@ -139,6 +98,32 @@ def main():
         np.save(queryLabelPath, queryLabel)
         np.save(queryFeaturePath, queryFeature)
         print('Extracted features saved at %s' % queryFeaturePath)
+
+    elif args.mode == 'submit1':
+        print('Loading features...')
+        idxLabelPath = exp_path + '/idxLabel.npy'
+        idxFeaturePath = exp_path + '/idxFeature.npy'
+        idxLabel = np.load(idxLabelPath)
+        idxFeature = np.load(idxFeaturePath)
+        print('idxLabel shape: %s' % str(idxLabel.shape))
+        print('idxFeature shape: %s' % str(idxFeature.shape))
+
+        queryLabelPath = exp_path + '/queryLabel.npy'
+        queryFeaturePath = exp_path + '/queryFeature.npy'
+        queryLabel = np.load(queryLabelPath)
+        queryFeature = np.load(queryFeaturePath)
+        print('queryLabel shape: %s' % str(queryLabel.shape))
+        print('queryFeature shape: %s' % str(queryFeature.shape))
+
+        print('Searching neighbors...')
+        tic = time.time()
+        label2res = nnsearch(idxFeature, queryFeature, idxLabel, queryLabel)
+        toc = time.time()
+        print("Search neighbors took %.2f s" % (toc-tic))
+
+        print('Start generating landmarks retrieval submition file...')
+        resultCSVfile = exp_path + '/ret_results.csv'
+        genResultFile(args.mode, testCSVfile, resultCSVfile, label2res)
 
     else:
         raise Exception('Unknown mode %s. Exiting...' % args.mode)
