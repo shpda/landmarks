@@ -7,6 +7,8 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as func
 
+import pretrainedmodels
+
 def getModel(mode, device, num_classes, input_size):
     model = None
 
@@ -25,38 +27,52 @@ def getModel(mode, device, num_classes, input_size):
 class LandmarksModel(nn.Module):
     def __init__(self, num_classes, input_size):
         super(LandmarksModel, self).__init__()
-        self.modelName = 'resnet'
-        #resnet = torchvision.models.resnet101(pretrained=True)
-        resnet = torchvision.models.resnet50(pretrained=True)
-        resnet.avgpool = nn.AvgPool2d(input_size // 32, stride=1)
+        #self.modelName = 'resnet'
+        #self.nnet = torchvision.models.resnet101(pretrained=True)
+        #self.nnet = torchvision.models.resnet50(pretrained=True)
+        self.modelName = 'densenet'
+        self.nnet = torchvision.models.densenet161(pretrained=True)
+        #self.modelName = 'se_resnet'
+        #self.nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
+        self.nnet.avgpool = nn.AvgPool2d(input_size // 32, stride=1)
+        self.nnet.classifier = nn.Linear(self.nnet.classifier.in_features, num_classes)   # for se_resnet
+        #self.nnet.last_linear = nn.Linear(self.nnet.last_linear.in_features, num_classes)   # for se_resnet
 
-        self.features = nn.Sequential(*list(resnet.children())[:-1])
+        '''
+        self.features = nn.Sequential(*list(nnet.children())[:-1])
         self.classifier = nn.Sequential(
-                            nn.Linear(resnet.fc.in_features, num_classes)
+                            #nn.Linear(nnet.fc.in_features, num_classes)          # for resnet
+                            #nn.Linear(nnet.classifier.in_features, num_classes)   # for densenet
+                            nn.Linear(nnet.last_linear.in_features, num_classes)   # for se_resnet
                           )
+        '''
 
         #for p in self.features.parameters():
         #    p.requires_grad = False
 
 
     def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
+        x = self.nnet(x)
+        #x = self.features(x)
+        #x = x.view(x.size(0), -1)
+        #x = self.classifier(x)
         return x
 
     def getParameters(self):
-        return filter(lambda p: p.requires_grad, self.parameters())
+        #return filter(lambda p: p.requires_grad, self.parameters())
+        return self.nnet.parameters()
 
 class FeatureExtractModel(nn.Module):
     def __init__(self, num_classes, input_size):
         super(FeatureExtractModel, self).__init__()
         self.modelName = 'featureExtract'
-        #resnet = torchvision.models.resnet101(pretrained=True)
-        resnet = torchvision.models.resnet50(pretrained=True)
+        #nnet = torchvision.models.resnet101(pretrained=True)
+        #nnet = torchvision.models.resnet50(pretrained=True)
+        nnet = torchvision.models.densenet161(pretrained=True)
+        #nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
 
-        #self.features = nn.Sequential(*list(resnet.children())[:-2]) # conv5_x
-        self.features = nn.Sequential(*list(resnet.children())[:-4]) # conv3_x
+        #self.features = nn.Sequential(*list(nnet.children())[:-2]) # conv5_x
+        self.features = nn.Sequential(*list(nnet.children())[:-4]) # conv3_x
 
         self.extractor = nn.Sequential(
                             #nn.MaxPool2d(input_size // 32, stride=1) # conv5_x

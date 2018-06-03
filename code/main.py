@@ -43,10 +43,12 @@ def main():
     model = getModel(args.mode, device, num_classes, input_size)
 
     if args.mode == 'train':
-        trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=100, num_train=num_train, tgtSet='train')
+        # resnet50 batch size: train = 100, dev = 256
+        # densenet161 batch size: train = 100, dev = 128
+        trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=40, num_train=num_train, tgtSet='train')
         loader = trainBatcher.loader
     
-        devBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=256, num_train=num_train, tgtSet='dev')
+        devBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=128, num_train=num_train, tgtSet='dev')
         dev_loader = devBatcher.loader
 
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)

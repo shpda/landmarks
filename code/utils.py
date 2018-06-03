@@ -25,7 +25,7 @@ def getDevice():
     print('device = %s' % device)
     return 0
 
-def splitTrainDevSet(imageList, ratio)
+def splitTrainDevSet(imageList, ratio):
     if imageList != None and len(imageList) > 0:
         num_train   = int(len(imageList[0]) * ratio)
         num_dev     = len(imageList[0]) - num_train

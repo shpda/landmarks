@@ -4,7 +4,7 @@
 
 import faiss
 
-def nnsearch(idxFeature, queryFeature, idxLabel, queryLabel)
+def nnsearch(idxFeature, queryFeature, idxLabel, queryLabel):
     dimension = len(idxFeature[0])
     print('feature dimension = %d' % dimension)
     index = faiss.IndexFlatL2(dimension)
