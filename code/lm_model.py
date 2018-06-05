@@ -68,8 +68,8 @@ class FeatureExtractModel(nn.Module):
         super(FeatureExtractModel, self).__init__()
         self.modelName = 'featureExtract'
         #nnet = torchvision.models.resnet101(pretrained=True)
-        #nnet = torchvision.models.resnet50(pretrained=True)
-        nnet = torchvision.models.densenet161(pretrained=True)
+        nnet = torchvision.models.resnet50(pretrained=True)
+        #nnet = torchvision.models.densenet161(pretrained=True)
         #nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
 
         #self.features = nn.Sequential(*list(nnet.children())[:-2]) # conv5_x
@@ -83,10 +83,13 @@ class FeatureExtractModel(nn.Module):
         #for p in self.features.parameters():
         #    p.requires_grad = False
 
+        self.eps = 1e-6
+
 
     def forward(self, x):
         x = self.features(x)
         x = self.extractor(x)
+        x = x / (torch.norm(x, p=2, dim=1, keepdim=True) + self.eps).expand_as(x) # normalize
         return x
 
 '''

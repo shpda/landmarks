@@ -5,6 +5,7 @@
 import torch
 import torch.nn.functional as func
 from utils import saveModel, loadModel, Logger, tryRestore
+from modules import pca, whiten
 import time
 import sys
 from tqdm import tqdm
@@ -139,6 +140,8 @@ class Trainer():
 
                 output = self.model(data)
                 output = np.squeeze(output.cpu().numpy())
+                #output = pca(output, 256)
+                #output = whiten(output)
                 for i in range(output.shape[0]):
                     label.append(ids[i])
                     feature.append(output[i])

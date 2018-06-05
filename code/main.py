@@ -46,6 +46,7 @@ def main():
     if args.mode == 'train' or args.mode == 'train-pruned':
         # resnet50 batch size: train = 100, dev = 256
         # densenet161 batch size: train = 40, dev = 128
+        # seresnet101 batch size: train = 48, dev = 128
         trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=48, num_train=num_train, tgtSet='train')
         loader = trainBatcher.loader
     
