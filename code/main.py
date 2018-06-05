@@ -28,6 +28,7 @@ def main():
     #input_size = 128
     input_size = 224 # after crop
     testCSVfile = '/home/gangwu/projects/landmarks/csvFiles/new_ret_test-256.csv'
+    #testCSVfile = '/home/gangwu/projects/landmarks/csvFiles/pruned_tiny_landmarks_test.csv'
 
     imageList = getImageList(args.mode, checkMissingFile=True)
 
@@ -42,17 +43,16 @@ def main():
     device = getDevice()
     model = getModel(args.mode, device, num_classes, input_size)
 
-    if args.mode == 'train':
+    if args.mode == 'train' or args.mode == 'train-pruned':
         # resnet50 batch size: train = 100, dev = 256
-        # densenet161 batch size: train = 100, dev = 128
-        trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=40, num_train=num_train, tgtSet='train')
+        # densenet161 batch size: train = 40, dev = 128
+        trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=48, num_train=num_train, tgtSet='train')
         loader = trainBatcher.loader
     
         devBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=128, num_train=num_train, tgtSet='dev')
         dev_loader = devBatcher.loader
 
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
-        #optimizer = optim.Adam(model.getParameters(), lr=0.001, betas=(0.9, 0.999))
         optimizer = optim.Adam(model.getParameters(), lr=0.0001, betas=(0.9, 0.999))
 
         trainer = Trainer(args.mode, model, loader, dev_loader, optimizer, device, exp_path)

@@ -77,6 +77,8 @@ def getImageList(mode, checkMissingFile):
     #ret_index_csv = '/home/gangwu/projects/landmarks/csvFiles/small_new_ret_index.csv'
     #ret_test_csv = '/home/gangwu/projects/landmarks/csvFiles/small_new_ret_test.csv'
 
+    pruned_train_csv = '/home/gangwu/projects/landmarks/csvFiles/pruned_tiny_landmarks_train.csv'
+
     rec_train_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_train-256.csv'
     rec_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_rec_test-256.csv'
     ret_index_csv = '/home/gangwu/projects/landmarks/csvFiles/new_ret_index-256.csv'
@@ -84,6 +86,8 @@ def getImageList(mode, checkMissingFile):
 
     if mode == 'train':
         return readCSV(rec_train_csv, checkMissingFile=True)
+    elif mode == 'train-pruned':
+        return readCSV(pruned_train_csv, checkMissingFile=True)
     elif mode == 'submit0':
         return readCSV(rec_test_csv, checkMissingFile=True, readLabel=False)
     elif mode == 'extract':

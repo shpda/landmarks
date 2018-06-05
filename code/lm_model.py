@@ -12,7 +12,7 @@ import pretrainedmodels
 def getModel(mode, device, num_classes, input_size):
     model = None
 
-    if mode == 'train' or mode == 'submit0':
+    if mode == 'train' or mode == 'train-pruned' or mode == 'submit0':
         model = LandmarksModel(num_classes, input_size)
     elif mode == 'extract':
         model = FeatureExtractModel(num_classes, input_size)
@@ -30,13 +30,14 @@ class LandmarksModel(nn.Module):
         #self.modelName = 'resnet'
         #self.nnet = torchvision.models.resnet101(pretrained=True)
         #self.nnet = torchvision.models.resnet50(pretrained=True)
-        self.modelName = 'densenet'
-        self.nnet = torchvision.models.densenet161(pretrained=True)
-        #self.modelName = 'se_resnet'
-        #self.nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
+        #self.modelName = 'densenet'
+        #self.nnet = torchvision.models.densenet161(pretrained=True)
+        self.modelName = 'se_resnet'
+        self.nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
         self.nnet.avgpool = nn.AvgPool2d(input_size // 32, stride=1)
-        self.nnet.classifier = nn.Linear(self.nnet.classifier.in_features, num_classes)   # for se_resnet
-        #self.nnet.last_linear = nn.Linear(self.nnet.last_linear.in_features, num_classes)   # for se_resnet
+        #self.nnet.fc = nn.Linear(self.nnet.fc.in_features, num_classes)   # for resnet
+        #self.nnet.classifier = nn.Linear(self.nnet.classifier.in_features, num_classes)   # for densenet
+        self.nnet.last_linear = nn.Linear(self.nnet.last_linear.in_features, num_classes)   # for se_resnet
 
         '''
         self.features = nn.Sequential(*list(nnet.children())[:-1])

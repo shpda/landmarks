@@ -14,7 +14,7 @@ import numpy as np
 
 class Trainer():
     def __init__(self, mode, model, loader, dev_loader, optimizer, device, exp_path, 
-                log_interval=5, eval_interval=500, save_interval=500):
+                 log_interval=5, eval_interval=500, save_interval=500):
         self.model = model
         self.loader = loader
         self.dev_loader = dev_loader
