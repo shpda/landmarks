@@ -12,6 +12,7 @@ from tqdm import tqdm
 import csv
 
 import numpy as np
+from sklearn.decomposition import IncrementalPCA
 
 class Trainer():
     def __init__(self, mode, model, loader, dev_loader, optimizer, device, exp_path, 
@@ -139,11 +140,13 @@ class Trainer():
                     data = data.to(self.device)
 
                 output = self.model(data)
-                output = np.squeeze(output.cpu().numpy())
+                output = output.cpu().numpy()
+                output = np.squeeze(output)
                 #output = pca(output, 256)
                 #output = whiten(output)
                 for i in range(output.shape[0]):
                     label.append(ids[i])
+                    #assert(len(output[i])==256):
                     feature.append(output[i])
         return label, feature
 

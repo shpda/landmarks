@@ -33,24 +33,27 @@ def main():
     imageList = getImageList(args.mode, checkMissingFile=True)
 
     #num_classes = len(imageList[3].keys())
-    num_classes = 14951
+    #num_classes = 14951
+    num_classes = 2
     print('%d classes' % num_classes)
-    num_train, num_dev = splitTrainDevSet(imageList, 0.98)
+    #num_train, num_dev = splitTrainDevSet(imageList, 0.98)
+    num_train, num_dev = splitTrainDevSet(imageList, 0.99)
 
     # percentage of data to load
     pct = 1.0 
+    #pct = 0.005 
 
     device = getDevice()
     model = getModel(args.mode, device, num_classes, input_size)
 
-    if args.mode == 'train' or args.mode == 'train-pruned':
+    if args.mode == 'train' or args.mode == 'train-pruned' or args.mode == 'train-filter':
         # resnet50 batch size: train = 100, dev = 256
         # densenet161 batch size: train = 40, dev = 128
         # seresnet101 batch size: train = 48, dev = 128
-        trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=48, num_train=num_train, tgtSet='train')
+        trainBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=100, num_train=num_train, tgtSet='train')
         loader = trainBatcher.loader
     
-        devBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=128, num_train=num_train, tgtSet='dev')
+        devBatcher = Batcher(imageList, percent=pct, preload=False, batchSize=256, num_train=num_train, tgtSet='dev')
         dev_loader = devBatcher.loader
 
         #optimizer = optim.SGD(model.getParameters(), lr=0.001, momentum=0.9)
@@ -82,8 +85,8 @@ def main():
         genResultFile(args.mode, testCSVfile, resultCSVfile, label2res)
 
     elif args.mode == 'extract':
-        idxImageBatcher = Batcher(imageList[0], percent=pct, batchSize=512, isSubmit=True)
-        queryImageBatcher = Batcher(imageList[1], percent=pct, batchSize=512, isSubmit=True)
+        idxImageBatcher = Batcher(imageList[0], percent=pct, batchSize=800, isSubmit=True)
+        queryImageBatcher = Batcher(imageList[1], percent=pct, batchSize=800, isSubmit=True)
 
         trainer = Trainer(args.mode, model, None, None, None, device, exp_path)
         print('Start extracting index image features...')
@@ -120,7 +123,7 @@ def main():
 
         print('Searching neighbors...')
         tic = time.time()
-        label2res = nnsearch(idxFeature, queryFeature, idxLabel, queryLabel)
+        label2res = nnsearch(idxFeature, queryFeature, idxLabel, queryLabel, queryExpansion = 4)
         toc = time.time()
         print("Search neighbors took %.2f s" % (toc-tic))
 

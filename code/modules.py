@@ -1,9 +1,12 @@
 
+import numpy as np
+
 # modules.py
 # training layers, components
 
 def pca(X, new_dims):
     # code from cs231n notes
+    # faster versions are implenmented in lm_models.py
 
     # Assume input data matrix X of size [N x D]
     X -= np.mean(X, axis = 0) # zero-center the data (important)
@@ -15,6 +18,8 @@ def pca(X, new_dims):
     return Xrot_reduced
 
 def whiten(X):
+    # faster versions are implenmented in lm_models.py
+
     # Assume input data matrix X of size [N x D]
     X -= np.mean(X, axis = 0) # zero-center the data (important)
     cov = np.dot(X.T, X) / X.shape[0] # get the data covariance matrix
