@@ -58,7 +58,7 @@ def loadExtModel(checkpoint_path, model):
     state = torch.load(checkpoint_path)
     states_to_load = {}
     for name, param in state['state_dict'].items():
-        if name.startswith('conv'):
+        if name.startswith('conv') or name.startswith('mixed'):
             states_to_load[name] = param
     if model != None:
         model_state = model.state_dict()

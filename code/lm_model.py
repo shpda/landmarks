@@ -27,17 +27,19 @@ def getModel(mode, device, num_classes, input_size):
 class LandmarksModel(nn.Module):
     def __init__(self, num_classes, input_size):
         super(LandmarksModel, self).__init__()
-        self.modelName = 'resnet'
+        #self.modelName = 'resnet'
         #self.nnet = torchvision.models.resnet101(pretrained=True)
-        self.nnet = torchvision.models.resnet50(pretrained=True)
+        #self.nnet = torchvision.models.resnet50(pretrained=True)
         #self.modelName = 'densenet'
         #self.nnet = torchvision.models.densenet161(pretrained=True)
-        #self.modelName = 'se_resnet'
-        #self.nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
+        #self.modelName = 'inception'
+        #self.nnet = torchvision.models.inception_v3(pretrained=True)
+        self.modelName = 'se_resnet'
+        self.nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
         self.nnet.avgpool = nn.AvgPool2d(input_size // 32, stride=1)
-        self.nnet.fc = nn.Linear(self.nnet.fc.in_features, num_classes)   # for resnet
+        #self.nnet.fc = nn.Linear(self.nnet.fc.in_features, num_classes)   # for resnet
         #self.nnet.classifier = nn.Linear(self.nnet.classifier.in_features, num_classes)   # for densenet
-        #self.nnet.last_linear = nn.Linear(self.nnet.last_linear.in_features, num_classes)   # for se_resnet
+        self.nnet.last_linear = nn.Linear(self.nnet.last_linear.in_features, num_classes)   # for se_resnet
 
         '''
         self.features = nn.Sequential(*list(nnet.children())[:-1])
@@ -68,18 +70,23 @@ class FeatureExtractModel(nn.Module):
         super(FeatureExtractModel, self).__init__()
         self.modelName = 'featureExtract'
         #nnet = torchvision.models.resnet101(pretrained=True)
-        nnet = torchvision.models.resnet50(pretrained=True)
+        #nnet = torchvision.models.resnet50(pretrained=True)
         #nnet = torchvision.models.densenet161(pretrained=True)
-        #nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
+        nnet = pretrainedmodels.se_resnet101(pretrained='imagenet')
+        #self.modelName = 'inception'
+        #self.nnet = torchvision.models.inception_v3(pretrained=True)
 
         #self.features = nn.Sequential(*list(nnet.children())[:-2]) # conv5_x
         self.features = nn.Sequential(*list(nnet.children())[:-3]) # conv4_x
         #self.features = nn.Sequential(*list(nnet.children())[:-4]) # conv3_x
 
+        #self.features = nn.Sequential(*list(self.nnet.children())[:-3]) # 5xInception
+
         self.extractor = nn.Sequential(
                             #nn.MaxPool2d(input_size // 32, stride=1) # conv5_x
-                            nn.MaxPool2d(input_size // 16, stride=1) # conv5_x
+                            nn.MaxPool2d(input_size // 16, stride=1) # conv4_x
                             #nn.MaxPool2d(input_size // 8, stride=1) # conv3_x
+                            #nn.MaxPool2d(8, stride=1) # 5xInception
                          )
 
         #for p in self.features.parameters():

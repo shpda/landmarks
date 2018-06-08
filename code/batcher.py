@@ -237,6 +237,7 @@ class Batcher(object):
         #                              transforms.ToTensor()])
         myTrans = transforms.Compose([
             #transforms.Resize(256),
+            #transforms.Resize(299),
             transforms.RandomCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -289,6 +290,60 @@ def showDataInClass(classId):
             if len(fileNames) > 63:
                 break
         print('Got %d train picture files with class %d' % (len(fileNames), classId))
+        imshow(torchvision.utils.make_grid(images))
+
+def showDataInClass2(th):
+    ret_index_csv = '/home/gangwu/projects/landmarks/csvFiles/new_ret_index-256.csv'
+    idxImageList = readCSV(ret_index_csv, checkMissingFile=True, readLabel=False)
+    idxFileIds = idxImageList[0]
+    idxFileNames = idxImageList[1]
+    idx2file = {}
+    for i in range(len(idxFileIds)):
+      idx2file[idxFileIds[i]] = idxFileNames[i]
+
+    ret_test_csv = '/home/gangwu/projects/landmarks/csvFiles/new_ret_test-256.csv'
+    idxImageList = readCSV(ret_test_csv, checkMissingFile=True, readLabel=False)
+    idxFileIds = idxImageList[0]
+    idxFileNames = idxImageList[1]
+    for i in range(len(idxFileIds)):
+      idx2file[idxFileIds[i]] = idxFileNames[i]
+
+    with open('/home/gangwu/projects/landmarks/experiment/landmarks-full-seresnet101/ret_results.csv') as csvfile:
+        CSVreader = csv.reader(csvfile, delimiter=',')
+        first = True
+        myTrans = transforms.Compose([transforms.ToTensor()])
+        images = []
+        
+        itr = 0
+        for row in CSVreader:
+            if first:
+                first = False
+                continue
+            itr += 1
+            #if itr < th:
+                #continue
+            testImg = row[0]
+            #if (testImg != '0034fcc8b622df6d') and (testImg != '08b28abd7a6f7b63') and (testImg != '160ae73128ba366f') and (testImg != '7650fb4cd97aa7e6') :
+            if (testImg != '2de5a4123fcd1283') and (testImg != '17190cb57ec5217a') and (testImg != '04836ef755dfb229') and (testImg != '000506dc6ab3a40e') :
+               continue
+            print(testImg)
+            if testImg not in idx2file.keys():
+                continue
+            fName = idx2file[testImg]
+            if osp.isfile(fName):
+                image = Image.open(fName)
+                images.append(myTrans(image.copy()))
+                image.close()
+            indexImgs = row[1]
+            for imgId in indexImgs.split()[:7]:
+                fName = idx2file[imgId]
+                if osp.isfile(fName):
+                    image = Image.open(fName)
+                    images.append(myTrans(image.copy()))
+                    image.close()
+            #if len(images) > 63:
+            if len(images) > 31:
+                break
         imshow(torchvision.utils.make_grid(images))
 
 def run_test():
